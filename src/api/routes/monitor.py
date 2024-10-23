@@ -34,26 +34,22 @@ async def get_live_status(
         raise HTTPException(status_code=404, detail="获取直播状态失败")
     return status
 
-@router.post("/screenshot/{room_id}")
-async def take_screenshot(
-    room_id: int,
-    monitor: BilibiliMonitor = Depends(get_monitor)
-) -> Dict[str, str]:
-    """手动获取直播间截图"""
-    status = monitor.check_live_status(str(room_id))
-    if not status or status['status'] != 1:
-        raise HTTPException(status_code=404, detail="直播间未开播")
-        
-    monitor.handle_screenshot(str(room_id), status)
-    return {"message": "截图请求已提交"}
-
 @router.get("/subscribers")
 async def get_subscribers(
     config: ConfigManager = Depends(get_config_manager)
-) -> List[str]:
+) -> List[Dict[str, Any]]:
     """获取当前监控列表"""
-    monitor_mids = config.get('monitor_mids', '[]')
-    return json.loads(monitor_mids)
+    monitor_mids = json.loads(config.get('monitor_mids', '[]'))
+    result = []
+    for mid in monitor_mids:
+        status = config.db.get_config(f'last_status_{mid}')
+        name = config.db.get_config(f'name_{mid}', '')
+        result.append({
+            "mid": mid,
+            "name": name,
+            "status": status
+        })
+    return result
 
 @router.post("/subscribers/{mid}")
 async def add_subscriber(
@@ -82,6 +78,9 @@ async def add_subscriber(
         # 添加到列表
         current_mids.append(mid)
         config.set('monitor_mids', json.dumps(current_mids))
+        
+        # 保存用户名
+        config.db.set_config(f'name_{mid}', status.get('name', '未知'))
         
         # 更新监控器的列表
         monitor.monitor_mids = current_mids

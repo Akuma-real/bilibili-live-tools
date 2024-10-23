@@ -10,6 +10,7 @@ import random
 from ..utils.notifier import LiveNotifier
 from datetime import datetime
 import sys
+from typing import Dict, Any
 
 class BilibiliMonitor:
     def __init__(self):
@@ -105,17 +106,15 @@ class BilibiliMonitor:
         from ..utils.uploader import ImageUploader  # 添加导入
         self.uploader = ImageUploader(cloudflare_config)
         
-    def check_live_status(self, mid, retry_count=3):
-        """检查直播状态 - 不使用cookie"""
+    def check_live_status(self, mid: str, retry_count=3) -> Dict[str, Any]:
+        """检查直播状态"""
         for attempt in range(retry_count):
             try:
-                # 添加随机延迟，避免请求过快
                 if attempt > 0:
                     delay = self.retry_delay + random.uniform(0, 3)
                     logger.debug(f"第{attempt + 1}次重试，等待{delay:.1f}秒")
                     time.sleep(delay)
                 
-                # 使用直播间API而不是个人空间API
                 url = f'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids'
                 referer = 'https://live.bilibili.com'
                 
@@ -151,17 +150,13 @@ class BilibiliMonitor:
                     logger.warning(f"API返回异常: {data}")
                     if data['code'] in [-352, -412, -799]:  # 风控、请求过快
                         continue
-                    
-            except requests.exceptions.RequestException as e:
-                logger.error(f"请求失败: {str(e)}")
-                if attempt < retry_count - 1:
-                    continue
+                
             except Exception as e:
                 logger.error(f"检查直播状态失败: {str(e)}")
                 if attempt < retry_count - 1:
                     continue
         
-        # 如果所有重试都失败了，返回缓存的状态（如果有的话）
+        # 如果所有重试都失败了，返回缓存的状态
         if mid in self.status_cache:
             cache_time = time.time() - self.status_cache[mid]['timestamp']
             if cache_time < 300:  # 缓存时间小于5分钟
@@ -413,3 +408,4 @@ class BilibiliMonitor:
                 logger.error(f"监控循环出错: {str(e)}")
                 time.sleep(self.check_interval)
                 continue
+
