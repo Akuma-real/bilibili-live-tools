@@ -337,77 +337,79 @@ class BilibiliMonitor:
 
     def run(self):
         """运行监控"""
-        try:
-            logger.info("开始监控直播状态...")
-            logger.info(f"监控列表: {self.monitor_mids}")
-            
-            while True:
-                try:
-                    # 批量获取所有UP主的状态
-                    all_status = self.check_multiple_live_status(self.monitor_mids)
-                    
-                    if all_status:
-                        for mid, live_status in all_status.items():
-                            current_status = live_status['status']
-                            
-                            # 获取上次状态
-                            last_status = self.db_manager.get_config(f'last_status_{mid}', '0')
-                            last_status = int(last_status)
-                            
-                            if current_status != last_status:
-                                if current_status == 1:
-                                    # 开播通知
-                                    self.notifier.notify_live_start(
-                                        name=live_status['name'],
-                                        room_id=live_status['room_id'],
-                                        title=live_status['title']
-                                    )
-                                    
-                                    logger.info(f"[开播] {live_status['name']} ({mid})")
-                                    logger.info(f"- 标题: {live_status['title']}")
-                                    logger.info(f"- 房间号: {live_status['room_id']}")
-                                    self.db_manager.add_live_record(
-                                        mid=mid,
-                                        room_id=live_status['room_id'],
-                                        title=live_status['title']
-                                    )
-                                    
-                                    # 开播时立即截图
-                                    self.handle_screenshot(mid, live_status)
-                                    
-                                else:
-                                    # 下播通知
-                                    self.notifier.notify_live_end(
-                                        name=live_status['name'],
-                                        room_id=live_status['room_id'],
-                                        title=live_status['title']
-                                    )
-                                    
-                                    logger.info(f"[下播] {live_status['name']} ({mid})")
-                                    self.db_manager.update_live_status(mid, status=0)
-                                    
-                                    # 下播时清除截图时间记录
-                                    self.last_screenshot_times.pop(mid, None)
+        logger.info("开始监控直播状态...")
+        logger.info(f"监控列表: {self.monitor_mids}")
+        
+        while True:
+            try:
+                # 批量获取所有UP主的状态
+                all_status = self.check_multiple_live_status(self.monitor_mids)
+                
+                if all_status:
+                    for mid, live_status in all_status.items():
+                        current_status = live_status['status']
+                        
+                        # 获取上次状态
+                        last_status = self.db_manager.get_config(f'last_status_{mid}', '0')
+                        last_status = int(last_status)
+                        
+                        if current_status != last_status:
+                            if current_status == 1:
+                                # 开播通知
+                                self.notifier.notify_live_start(
+                                    name=live_status['name'],
+                                    room_id=live_status['room_id'],
+                                    title=live_status['title']
+                                )
                                 
-                                self.db_manager.set_config(f'last_status_{mid}', str(current_status))
-                            
-                            # 如果正在直播，检查是否需要定时截图
-                            elif current_status == 1:
+                                logger.info(f"[开播] {live_status['name']} ({mid})")
+                                logger.info(f"- 标题: {live_status['title']}")
+                                logger.info(f"- 房间号: {live_status['room_id']}")
+                                self.db_manager.add_live_record(
+                                    mid=mid,
+                                    room_id=live_status['room_id'],
+                                    title=live_status['title']
+                                )
+                                
+                                # 开播时立即截图
                                 self.handle_screenshot(mid, live_status)
-                    
-                    # 等待下次检查
-                    logger.debug(f"等待 {self.check_interval} 秒后进行下次检查")
-                    time.sleep(self.check_interval)
-                    
-                except KeyboardInterrupt:
-                    raise
-                except Exception as e:
-                    logger.error(f"监控出错: {str(e)}")
-                    time.sleep(self.check_interval)
-                    
-        except KeyboardInterrupt:
-            logger.info("正在停止监控...")
-            # 清理资源
-            self.session.close()
-            logger.info("监控已停止")
-
+                                
+                            else:
+                                # 下播通知
+                                self.notifier.notify_live_end(
+                                    name=live_status['name'],
+                                    room_id=live_status['room_id'],
+                                    title=live_status['title']
+                                )
+                                
+                                logger.info(f"[下播] {live_status['name']} ({mid})")
+                                self.db_manager.update_live_status(mid, status=0)
+                                
+                                # 下播时清除截图时间记录
+                                self.last_screenshot_times.pop(mid, None)
+                            
+                            self.db_manager.set_config(f'last_status_{mid}', str(current_status))
+                        
+                        # 如果正在直播，检查是否需要定时截图
+                        elif current_status == 1:
+                            current_time = time.time()
+                            last_time = self.last_screenshot_times.get(mid, 0)
+                            
+                            # 只在达到截图间隔时才截图
+                            if (current_time - last_time) >= self.screenshot_interval:
+                                self.handle_screenshot(mid, live_status)
+                
+                # 等待下次检查
+                logger.debug(f"等待 {self.check_interval} 秒后进行下次检查")
+                time.sleep(self.check_interval)
+                
+            except KeyboardInterrupt:
+                logger.info("正在停止监控...")
+                self.session.close()
+                logger.info("监控已停止")
+                raise
+                
+            except Exception as e:
+                logger.error(f"监控循环出错: {str(e)}")
+                time.sleep(self.check_interval)
+                continue

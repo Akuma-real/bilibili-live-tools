@@ -14,7 +14,7 @@ class ConfigManager:
         self.load_config()
 
     def load_config(self, force=False) -> None:
-        """从.env文件和数据库加载配置
+        """从数据库和.env文件加载配置
         
         Args:
             force: 是否强制重新加载
@@ -27,30 +27,33 @@ class ConfigManager:
         # 更新加载时间
         self.last_load_time = current_time
         
-        # 从.env加载配置
-        load_dotenv(override=True)
-        
-        # 从环境变量读取配置
-        env_configs = {
-            'cloudflare_domain': os.getenv('CLOUDFLARE_DOMAIN', ''),
-            'cloudflare_auth_code': os.getenv('CLOUDFLARE_AUTH_CODE', ''),
-            'server_chan_key': os.getenv('SERVER_CHAN_KEY', ''),
-            'bilibili_cookies': os.getenv('BILIBILI_COOKIES', ''),
-            'monitor_mids': os.getenv('MONITOR_MIDS', '[]'),
-            'check_interval': os.getenv('CHECK_INTERVAL', '60')
+        # 定义需要的配置项
+        config_keys = {
+            'cloudflare_domain': '图床域名',
+            'cloudflare_auth_code': '图床认证码',
+            'server_chan_key': 'Server酱密钥',
+            'bilibili_cookies': 'B站cookies',
+            'monitor_mids': '监控列表',
+            'check_interval': '检查间隔'
         }
         
-        # 检查配置是否有变化
-        changed = False
-        for key, value in env_configs.items():
-            if value and self.config_cache.get(key) != value:
-                changed = True
+        # 首先从数据库加载所有配置
+        for key in config_keys:
+            value = self.db.get_config(key)
+            if value is not None:
                 self.config_cache[key] = value
-                self.db.set_config(key, value)
-                logger.debug(f"从.env更新配置: {key}")
         
-        if changed:
-            logger.info("配置已更新")
+        # 如果数据库中没有配置，则从.env加载
+        load_dotenv(override=True)
+        for key in config_keys:
+            if key not in self.config_cache or not self.config_cache[key]:
+                env_value = os.getenv(key.upper(), '')
+                if env_value:  # 只在环境变量有值时更新
+                    self.config_cache[key] = env_value
+                    self.db.set_config(key, env_value)
+                    logger.info(f"从.env导入配置: {key}")
+        
+        logger.debug("配置加载完成")
 
     def get(self, key: str, default: Any = None) -> Any:
         """获取配置值"""

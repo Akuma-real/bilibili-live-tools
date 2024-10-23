@@ -65,3 +65,6 @@ ENV TZ=Asia/Shanghai
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# 在现有Dockerfile最后添加
+EXPOSE 8000

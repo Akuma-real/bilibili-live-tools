@@ -13,3 +13,8 @@ Pillow>=8.0.0
 # 工具
 cloudscraper>=1.2.71
 urllib3>=2.0.7
+
+# API相关
+fastapi>=0.104.1
+uvicorn>=0.24.0
+python-multipart>=0.0.6

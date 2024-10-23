@@ -1,10 +1,12 @@
-version: '3'
-
 services:
   bilibili-live-tools:
-    image: ghcr.io/akuma-real/bilibili-live-tools:latest
-    platform: linux/amd64  # 明确指定平台
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/amd64
     container_name: bilibili-live-tools
+    ports:
+      - "8000:8000"
     volumes:
       - ./.env:/app/.env
       - ./data:/app/data

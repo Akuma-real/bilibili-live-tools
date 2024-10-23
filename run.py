@@ -3,22 +3,18 @@
 
 import os
 import sys
-
-# 添加src目录到Python路径
-sys.path.append(os.path.dirname(__file__))
-
-# 修改导入语句
-from src.core.monitor import BilibiliMonitor  # 改为从 core 子模块导入
-from src.utils.init_project import init_project
+import uvicorn
+from src.api.app import create_app
 
 def main():
     try:
-        # 首先初始化项目
-        init_project()
-        
-        # 然后启动监控
-        monitor = BilibiliMonitor()
-        monitor.run()
+        app = create_app()
+        uvicorn.run(
+            app,
+            host="0.0.0.0",
+            port=8000,
+            reload=False
+        )
     except KeyboardInterrupt:
         print("\n程序已停止")
     except Exception as e:
