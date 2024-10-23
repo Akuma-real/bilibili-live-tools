@@ -1,6 +1,9 @@
+version: '3'
+
 services:
   bilibili-live-tools:
     image: ghcr.io/akuma-real/bilibili-live-tools:latest
+    platform: linux/amd64  # 明确指定平台
     container_name: bilibili-live-tools
     volumes:
       - ./.env:/app/.env
