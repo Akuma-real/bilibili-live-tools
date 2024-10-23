@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  bilibili-monitor:
+    build: .
+    volumes:
+      - ./.env:/app/.env
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./temp:/app/temp
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai

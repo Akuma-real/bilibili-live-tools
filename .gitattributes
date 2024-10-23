@@ -1,0 +1,15 @@
+# 自动处理换行符
+* text=auto
+
+# 指定shell脚本使用LF
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+
+# Python文件使用LF
+*.py text eol=lf
+
+# 配置文件使用LF
+*.yml text eol=lf
+*.yaml text eol=lf
+.env* text eol=lf
+.env.example text eol=lf
