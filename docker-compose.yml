@@ -1,8 +1,7 @@
-version: '3'
-
 services:
-  bilibili-monitor:
-    build: .
+  bilibili-live-tools:
+    image: ghcr.io/akuma-real/bilibili-live-tools:latest
+    container_name: bilibili-live-tools
     volumes:
       - ./.env:/app/.env
       - ./data:/app/data
