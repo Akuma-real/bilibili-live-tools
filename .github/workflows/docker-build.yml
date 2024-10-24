@@ -24,6 +24,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Convert repository owner to lowercase
+        run: |
+          echo "OWNER_LOWER=${GITHUB_REPOSITORY_OWNER,,}" >>${GITHUB_ENV}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -51,7 +55,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.GHCR_REGISTRY }}/${{ github.repository_owner }}/bilibili-live-tools:latest
+            ${{ env.GHCR_REGISTRY }}/${{ env.OWNER_LOWER }}/bilibili-live-tools:latest
             ${{ env.QINGCLOUD_REGISTRY }}/${{ secrets.QINGCLOUD_NAMESPACE }}/bilibili-live-tools:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
