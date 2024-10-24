@@ -339,70 +339,69 @@ class BilibiliMonitor:
                 
                 # 遍历监控列表
                 for mid in self.monitor_mids:
-                    try:
-                        # 获取当前状态
-                        live_status = self.check_live_status(mid)
-                        if not live_status:
-                            logger.warning(f"获取直播状态失败: {mid}")
-                            continue
-                        
-                        # 获取上次状态
-                        last_status_str = self.db_manager.get_config(f'last_status_{mid}')
-                        last_status = int(last_status_str) if last_status_str is not None else 0
-                        
-                        # 获取当前状态
-                        current_status = int(live_status.get('status', 0))
-                        
-                        # 更新状态缓存
-                        self.status_cache[mid] = {
-                            'status': current_status,
-                            'room_id': live_status.get('room_id'),
-                            'title': live_status.get('title'),
-                            'name': live_status.get('name'),
-                            'timestamp': time.time() + self.check_interval
-                        }
-                        
-                        # 如果状态发生变化
-                        if current_status != last_status:
-                            if current_status == 1:
-                                # 开播通知
-                                self.notifier.notify_live_start(
-                                    name=live_status['name'],
-                                    room_id=live_status['room_id'],
-                                    title=live_status['title']
-                                )
-                                
-                                logger.info(f"[开播] {live_status['name']} ({mid})")
-                                self.db_manager.add_live_record(
-                                    mid=mid,
-                                    room_id=live_status['room_id'],
-                                    title=live_status['title']
-                                )
-                            else:
-                                # 下播通知
-                                self.notifier.notify_live_end(
-                                    name=live_status['name'],
-                                    room_id=live_status['room_id'],
-                                    title=live_status['title']
-                                )
-                                
-                                logger.info(f"[下播] {live_status['name']} ({mid})")
-                                self.db_manager.update_live_status(mid, status=0)
-                                
-                                # 下播时清除截图时间记录
-                                self.last_screenshot_times.pop(mid, None)
+                    # 获取当前状态
+                    live_status = self.check_live_status(mid)
+                    if not live_status:
+                        logger.warning(f"获取直播状态失败: {mid}")
+                        continue
+                    
+                    # 获取上次状态
+                    last_status_str = self.db_manager.get_config(f'last_status_{mid}')
+                    last_status = int(last_status_str) if last_status_str is not None else 0
+                    
+                    # 获取当前状态
+                    current_status = int(live_status.get('status', 0))
+                    
+                    # 更新状态缓存
+                    self.status_cache[mid] = {
+                        'status': current_status,
+                        'room_id': live_status.get('room_id'),
+                        'title': live_status.get('title'),
+                        'name': live_status.get('name'),
+                        'timestamp': time.time() + self.check_interval
+                    }
+                    
+                    # 如果状态发生变化
+                    if current_status != last_status:
+                        if current_status == 1:
+                            # 开播通知
+                            self.notifier.notify_live_start(
+                                name=live_status['name'],
+                                room_id=live_status['room_id'],
+                                title=live_status['title']
+                            )
                             
-                            self.db_manager.set_config(f'last_status_{mid}', str(current_status))
-                        
-                        # 如果正在直播，检查是否需要定时截图
-                        elif current_status == 1:
-                            current_time = time.time()
-                            last_time = self.last_screenshot_times.get(mid, 0)
+                            logger.info(f"[开播] {live_status['name']} ({mid})")
+                            self.db_manager.add_live_record(
+                                mid=mid,
+                                room_id=live_status['room_id'],
+                                title=live_status['title']
+                            )
+                        else:
+                            # 下播通知
+                            self.notifier.notify_live_end(
+                                name=live_status['name'],
+                                room_id=live_status['room_id'],
+                                title=live_status['title']
+                            )
                             
-                            # 只在达到截图间隔时才截图
-                            if (current_time - last_time) >= self.screenshot_interval:
-                                self.handle_screenshot(mid, live_status)
-                
+                            logger.info(f"[下播] {live_status['name']} ({mid})")
+                            self.db_manager.update_live_status(mid, status=0)
+                            
+                            # 下播时清除截图时间记录
+                            self.last_screenshot_times.pop(mid, None)
+                        
+                        self.db_manager.set_config(f'last_status_{mid}', str(current_status))
+                    
+                    # 如果正在直播，检查是否需要定时截图
+                    elif current_status == 1:
+                        current_time = time.time()
+                        last_time = self.last_screenshot_times.get(mid, 0)
+                        
+                        # 只在达到截图间隔时才截图
+                        if (current_time - last_time) >= self.screenshot_interval:
+                            self.handle_screenshot(mid, live_status)
+            
                 # 等待下次检查
                 logger.debug(f"等待 {self.check_interval} 秒后进行下次检查")
                 time.sleep(self.check_interval)
