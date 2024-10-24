@@ -409,3 +409,13 @@ class BilibiliMonitor:
                 time.sleep(self.check_interval)
                 continue
 
+    # 在 BilibiliMonitor 类中添加方法
+    def update_monitor_list(self):
+        """更新监控列表"""
+        try:
+            # 从数据库获取最新的监控列表
+            monitor_mids = json.loads(self.config_manager.get('monitor_mids', '[]'))
+            self.monitor_mids = monitor_mids
+            logger.info(f"监控列表已更新: {self.monitor_mids}")
+        except Exception as e:
+            logger.error(f"更新监控列表失败: {str(e)}")

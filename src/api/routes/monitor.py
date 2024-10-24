@@ -82,8 +82,8 @@ async def add_subscriber(
         # 保存用户名
         config.db.set_config(f'name_{mid}', status.get('name', '未知'))
         
-        # 更新监控器的列表
-        monitor.monitor_mids = current_mids
+        # 立即更新监控器的列表
+        monitor.update_monitor_list()
         
         return {
             "message": "添加成功",
@@ -112,8 +112,12 @@ async def remove_subscriber(
         current_mids.remove(mid)
         config.set('monitor_mids', json.dumps(current_mids))
         
-        # 更新监控器的列表
-        monitor.monitor_mids = current_mids
+        # 立即更新监控器的列表
+        monitor.update_monitor_list()
+        
+        # 清理相关配置
+        config.db.set_config(f'last_status_{mid}', None)
+        config.db.set_config(f'name_{mid}', None)
         
         return {"message": f"已移除用户 {mid}"}
     except ValueError:
