@@ -56,10 +56,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push to QingCloud Registry
+      - name: Build and push to QingCloud Registry (amd64)
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm64 \
+            --platform linux/amd64 \
             --tag ${{ env.QINGCLOUD_REGISTRY }}/${{ secrets.QINGCLOUD_NAMESPACE }}/bilibili-live-tools:latest \
             --push \
             .
