@@ -43,7 +43,7 @@ jobs:
 
       - name: Log in to QingCloud Registry
         run: |
-          echo "${{ secrets.QINGCLOUD_PASSWORD }}" | docker login ${{ env.QINGCLOUD_REGISTRY }} -u "${{ secrets.QINGCLOUD_USERNAME }}" --password-stdin
+          docker login -u ${{ secrets.QINGCLOUD_DOCKER_USERNAME }} -p ${{ secrets.QINGCLOUD_DOCKER_PASSWORD }} ${{ env.QINGCLOUD_REGISTRY }}
 
       - name: Build and push to GitHub Registry
         uses: docker/build-push-action@v5
