@@ -4,6 +4,8 @@ from loguru import logger
 from typing import Dict, Any
 from datetime import datetime
 import time
+import os
+from src.core.database import DatabaseManager
 
 class ServerChanNotifier:
     """Server酱通知器"""
@@ -175,8 +177,28 @@ class LiveNotifier:
         
         # 获取直播信息
         live_info = self.get_live_info(room_id)
-        live_time = live_info.get('live_time', '')
-        duration = self.get_live_duration(live_time) if live_time else "未知"
+        # 从数据库获取开播时间,以防API获取失败
+        db = DatabaseManager(os.path.join('data', 'database.db'))
+        live_record = db.get_current_live_record(room_id)
+        
+        # 优先使用数据库中的开播时间
+        live_time = ''
+        if live_record and live_record.get('start_time'):
+            live_time = live_record['start_time']
+        elif live_info.get('live_time'):
+            live_time = live_info['live_time']
+        
+        duration = "未知"
+        if live_time:
+            try:
+                start = datetime.strptime(live_time, "%Y-%m-%d %H:%M:%S")
+                duration = datetime.now() - start
+                hours = duration.total_seconds() // 3600
+                minutes = (duration.total_seconds() % 3600) // 60
+                duration = f"{int(hours)}小时{int(minutes)}分钟"
+            except Exception as e:
+                logger.error(f"计算直播时长失败: {str(e)}")
+                duration = "未知"
         
         title_text = f"⭕直播结束：{name} 下播了"
         content = (

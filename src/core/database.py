@@ -3,6 +3,9 @@ import sqlite3
 import os
 from contextlib import contextmanager
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DatabaseManager:
     def __init__(self, db_path):
@@ -136,3 +139,34 @@ class DatabaseManager:
             ''', (mid,))
             result = cursor.fetchone()
             return result['id'] if result else None
+    
+    def get_current_live_record(self, room_id: int) -> dict:
+        """获取当前直播记录
+        
+        Args:
+            room_id: 房间号
+        
+        Returns:
+            dict: 直播记录信息
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT * FROM live_records 
+                    WHERE room_id = ? AND status = 1 
+                    ORDER BY start_time DESC LIMIT 1
+                """, (room_id,))
+                record = cursor.fetchone()
+                if record:
+                    return {
+                        'id': record[0],
+                        'mid': record[1],
+                        'room_id': record[2],
+                        'title': record[3],
+                        'start_time': record[4],
+                        'status': record[5]
+                    }
+        except Exception as e:
+            logger.error(f"获取直播记录失败: {str(e)}")
+        return None
