@@ -4,18 +4,49 @@ import shutil
 from loguru import logger
 from src.core.database import DatabaseManager
 from dotenv import load_dotenv
+import sys
 
 def init_project():
     """初始化项目目录结构"""
+    # 首先移除默认的日志处理器
+    logger.remove()
+    
+    # 添加控制台输出
+    logger.add(
+        sys.stderr,
+        level=os.getenv('LOG_LEVEL', 'INFO'),
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}:{function}:{line} - {message}"
+    )
+    
     directories = {
         'data': '数据存储',
         'logs': '日志文件',
         'temp': '临时文件'
     }
     
+    # 确保目录存在并有正确的权限
     for dir_name, description in directories.items():
-        os.makedirs(dir_name, exist_ok=True)
+        path = os.path.join(os.getcwd(), dir_name)
+        os.makedirs(path, exist_ok=True)
+        # 设置目录权限
+        os.chmod(path, 0o777)
         logger.info(f"创建目录: {dir_name}/ ({description})")
+    
+    # 配置文件日志
+    log_file = os.path.join('logs', 'monitor_{time:YYYY-MM-DD}.log')
+    try:
+        logger.add(
+            log_file,
+            rotation="00:00",  # 每天轮换
+            retention="7 days",  # 保留7天
+            level=os.getenv('LOG_LEVEL', 'INFO'),
+            encoding='utf-8',
+            enqueue=True,  # 异步写入
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {module}:{function}:{line} - {message}"
+        )
+    except Exception as e:
+        logger.error(f"配置日志文件失败: {str(e)}")
+        # 继续运行，但只使用控制台输出
     
     # 创建 .env 文件（仅当不存在时）
     if not os.path.exists('.env'):
