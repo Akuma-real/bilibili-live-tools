@@ -17,51 +17,37 @@ def init_project():
         os.makedirs(dir_name, exist_ok=True)
         logger.info(f"创建目录: {dir_name}/ ({description})")
     
-    # 创建 .env 文件
+    # 创建 .env 文件（仅当不存在时）
     if not os.path.exists('.env'):
-        shutil.copy2('.env.example', '.env')
-        logger.info("创建配置文件: .env")
+        if os.path.exists('.env.example'):
+            shutil.copy2('.env.example', '.env')
+            logger.info("创建配置文件: .env")
+        else:
+            logger.warning("未找到 .env.example 文件")
     
-    # 初始化数据库和默认配置
+    # 初始化数据库
     db = DatabaseManager(os.path.join('data', 'database.db'))
     
     # 从环境变量加载配置
     load_dotenv()
     
-    # 设置所有配置
+    # 设置配置（仅当数据库中不存在时）
     configs = {
         'cloudflare_domain': os.getenv('CLOUDFLARE_DOMAIN', ''),
         'cloudflare_auth_code': os.getenv('CLOUDFLARE_AUTH_CODE', ''),
         'server_chan_key': os.getenv('SERVER_CHAN_KEY', ''),
-        'bilibili_cookies': os.getenv('BILIBILI_COOKIES', ''),  # 添加B站cookies
-        'monitor_mids': os.getenv('MONITOR_MIDS', '[]'),  # 添加监控列表
+        'bilibili_cookies': os.getenv('BILIBILI_COOKIES', ''),
+        'monitor_mids': os.getenv('MONITOR_MIDS', '[]'),
         'check_interval': os.getenv('CHECK_INTERVAL', '60')
     }
     
-    # 设置配置到数据库
+    # 仅设置不存在的配置
     for key, value in configs.items():
-        if value:  # 只设置非空值
+        if value and not db.get_config(key):  # 只在值不为空且数据库中不存在时设置
             db.set_config(key, value)
-            logger.debug(f"设置配置: {key}")
+            logger.debug(f"设置初始配置: {key}")
     
     logger.info("项目初始化完成")
-    
-    # 检查必要配置
-    missing_configs = []
-    required_configs = {
-        'cloudflare_domain': '图床域名',
-        'cloudflare_auth_code': '图床认证码',
-        'server_chan_key': 'Server酱密钥',
-        'bilibili_cookies': 'B站cookies',
-        'monitor_mids': '监控列表'
-    }
-    
-    for key, name in required_configs.items():
-        if not db.get_config(key):
-            missing_configs.append(name)
-    
-    if missing_configs:
-        logger.warning(f"请在 .env 文件中设置以下配置: {', '.join(missing_configs)}")
 
 if __name__ == "__main__":
     init_project()

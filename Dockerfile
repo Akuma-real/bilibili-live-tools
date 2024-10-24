@@ -46,8 +46,12 @@ COPY run.py .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 创建必要的目录
-RUN mkdir -p data logs temp
+# 创建必要的目录并设置权限
+RUN mkdir -p data logs temp && \
+    chown -R 1000:1000 data logs temp
+
+# 设置默认用户
+USER 1000:1000
 
 # 清理编译依赖以减小镜像体积
 RUN apk del gcc musl-dev python3-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev
