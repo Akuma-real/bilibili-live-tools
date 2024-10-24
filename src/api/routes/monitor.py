@@ -5,6 +5,7 @@ from ..dependencies import get_monitor, get_config_manager, verify_api_key
 from src.core.monitor import BilibiliMonitor
 from src.core.config import ConfigManager
 import json
+import logging
 
 router = APIRouter(
     prefix="/monitor",
@@ -36,20 +37,34 @@ async def get_live_status(
 
 @router.get("/subscribers")
 async def get_subscribers(
-    config: ConfigManager = Depends(get_config_manager)
+    config: ConfigManager = Depends(get_config_manager),
+    monitor: BilibiliMonitor = Depends(get_monitor)
 ) -> List[Dict[str, Any]]:
-    """获取当前监控列表"""
-    monitor_mids = json.loads(config.get('monitor_mids', '[]'))
-    result = []
-    for mid in monitor_mids:
-        status = config.db.get_config(f'last_status_{mid}')
-        name = config.db.get_config(f'name_{mid}', '')
-        result.append({
-            "mid": mid,
-            "name": name,
-            "status": status
-        })
-    return result
+    """获取监控列表"""
+    try:
+        # 从配置中获取监控列表
+        monitor_mids = json.loads(config.get('monitor_mids', '[]'))
+        result = []
+        
+        # 从状态缓存中获取最新状态
+        status_cache = monitor.status_cache
+        
+        for mid in monitor_mids:
+            # 使用状态缓存中的数据
+            status_info = status_cache.get(mid, {})
+            result.append({
+                "mid": mid,
+                "name": status_info.get('name', config.get(f'name_{mid}', '未知')),
+                "status": status_info.get('status'),
+                "room_id": status_info.get('room_id'),
+                "title": status_info.get('title')
+            })
+        
+        return result
+        
+    except Exception as e:
+        logging.error(f"获取监控列表失败: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取监控列表失败")
 
 @router.post("/subscribers/{mid}")
 async def add_subscriber(
