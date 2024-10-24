@@ -46,27 +46,29 @@ async def get_subscribers(
         monitor_mids = json.loads(config.get('monitor_mids', '[]'))
         result = []
         
-        # 从状态缓存中获取最新状态
+        # 直接使用 monitor.status_cache 中的状态
         status_cache = monitor.status_cache
         
         for mid in monitor_mids:
-            # 使用状态缓存中的数据
+            # 从 status_cache 获取完整状态信息
             status_info = status_cache.get(mid, {})
-            
-            # 确保状态值为整数
-            status = status_info.get('status')
-            if status is not None:
-                status = int(status)
+            if status_info:
+                result.append({
+                    "mid": mid,
+                    "name": status_info.get('name', '未知'),
+                    "status": status_info.get('status', 0),
+                    "room_id": status_info.get('room_id'),
+                    "title": status_info.get('title')
+                })
             else:
-                status = 0  # 默认为未开播状态
-                
-            result.append({
-                "mid": mid,
-                "name": status_info.get('name', config.get(f'name_{mid}', '未知')),
-                "status": status,
-                "room_id": status_info.get('room_id'),
-                "title": status_info.get('title')
-            })
+                # 如果缓存中没有数据，添加基本信息
+                result.append({
+                    "mid": mid,
+                    "name": config.get(f'name_{mid}', '未知'),
+                    "status": 0,
+                    "room_id": None,
+                    "title": None
+                })
         
         return result
         
