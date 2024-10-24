@@ -46,14 +46,7 @@ COPY run.py .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 创建必要的目录并设置权限
-RUN mkdir -p data logs temp && \
-    chown -R 1000:1000 data logs temp
-
-# 设置默认用户
-USER 1000:1000
-
-# 清理编译依赖以减小镜像体积
+# 清理编译依赖以减小镜像体积（在设置用户之前执行）
 RUN apk del gcc musl-dev python3-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev
 
 # 复制并设置启动脚本
@@ -68,7 +61,14 @@ RUN apk add --no-cache dos2unix \
 ENV TZ=Asia/Shanghai
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
+# 创建必要的目录并设置权限（在最后执行）
+RUN mkdir -p data logs temp && \
+    chown -R 1000:1000 /app
+
+# 设置默认用户（最后设置）
+USER 1000:1000
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# 在现有Dockerfile最后添加
+# 暴露端口
 EXPOSE 8000
