@@ -52,10 +52,18 @@ async def get_subscribers(
         for mid in monitor_mids:
             # 使用状态缓存中的数据
             status_info = status_cache.get(mid, {})
+            
+            # 确保状态值为整数
+            status = status_info.get('status')
+            if status is not None:
+                status = int(status)
+            else:
+                status = 0  # 默认为未开播状态
+                
             result.append({
                 "mid": mid,
                 "name": status_info.get('name', config.get(f'name_{mid}', '未知')),
-                "status": status_info.get('status'),
+                "status": status,
                 "room_id": status_info.get('room_id'),
                 "title": status_info.get('title')
             })
