@@ -8,10 +8,10 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./.env:/app/.env
+      - ./.env:/app/.env:ro
       - ./data:/app/data:rw
-      - ./logs:/app/logs
-      - ./temp:/app/temp
+      - ./logs:/app/logs:rw
+      - ./temp:/app/temp:rw
     restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai

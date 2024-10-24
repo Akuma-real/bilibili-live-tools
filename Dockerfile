@@ -38,6 +38,9 @@ ENV CHROME_BIN=/usr/bin/chromium-browser \
     PYTHONUNBUFFERED=1 \
     DISPLAY=:99
 
+# 创建必要的目录
+RUN mkdir -p data logs temp
+
 # 复制项目文件
 COPY requirements.txt .
 COPY src/ src/
@@ -46,12 +49,11 @@ COPY run.py .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 清理编译依赖以减小镜像体积（在设置用户之前执行）
+# 清理编译依赖
 RUN apk del gcc musl-dev python3-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev
 
 # 复制并设置启动脚本
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-# 确保使用dos2unix转换换行符，并设置执行权限
 RUN apk add --no-cache dos2unix \
     && dos2unix /docker-entrypoint.sh \
     && chmod +x /docker-entrypoint.sh \
@@ -61,14 +63,14 @@ RUN apk add --no-cache dos2unix \
 ENV TZ=Asia/Shanghai
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
-# 创建必要的目录并设置权限（在最后执行）
-RUN mkdir -p data logs temp && \
-    chown -R 1000:1000 /app
+# 设置目录权限
+RUN chown -R 1000:1000 /app && \
+    chmod -R 755 /app && \
+    chmod -R 777 /app/logs /app/data /app/temp
 
-# 设置默认用户（最后设置）
+# 设置默认用户
 USER 1000:1000
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# 暴露端口
 EXPOSE 8000
