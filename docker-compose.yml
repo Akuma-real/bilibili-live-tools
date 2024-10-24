@@ -9,10 +9,9 @@ services:
       - "8000:8000"
     volumes:
       - ./.env:/app/.env:ro
-      - ./data:/app/data:rw
-      - ./logs:/app/logs:rw
-      - ./temp:/app/temp:rw
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./temp:/app/temp
     restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai
-    user: "${UID:-1000}:${GID:-1000}"

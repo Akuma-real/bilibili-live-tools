@@ -63,13 +63,8 @@ RUN apk add --no-cache dos2unix \
 ENV TZ=Asia/Shanghai
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
-# 设置目录权限
-RUN chown -R 1000:1000 /app && \
-    chmod -R 755 /app && \
-    chmod -R 777 /app/logs /app/data /app/temp
-
-# 设置默认用户
-USER 1000:1000
+# 设置目录权限（移除用户切换，使用 root 权限）
+RUN chmod -R 777 /app/logs /app/data /app/temp
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
