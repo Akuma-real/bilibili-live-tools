@@ -331,23 +331,38 @@ class BilibiliMonitor:
                         logger.error(f"删除临时文件失败: {str(e)}")
 
     def run(self):
-        """运行监控"""
-        logger.info("开始监控直播状态...")
-        logger.info(f"监控列表: {self.monitor_mids}")
-        
+        """运行监控循环"""
         while True:
             try:
-                # 批量获取所有UP主的状态
-                all_status = self.check_multiple_live_status(self.monitor_mids)
+                # 更新监控列表
+                self.update_monitor_list()
                 
-                if all_status:
-                    for mid, live_status in all_status.items():
-                        current_status = live_status['status']
+                # 遍历监控列表
+                for mid in self.monitor_mids:
+                    try:
+                        # 获取当前状态
+                        live_status = self.check_live_status(mid)
+                        if not live_status:
+                            logger.warning(f"获取直播状态失败: {mid}")
+                            continue
                         
                         # 获取上次状态
-                        last_status = self.db_manager.get_config(f'last_status_{mid}', '0')
-                        last_status = int(last_status)
+                        last_status_str = self.db_manager.get_config(f'last_status_{mid}')
+                        last_status = int(last_status_str) if last_status_str is not None else 0
                         
+                        # 获取当前状态
+                        current_status = int(live_status.get('status', 0))
+                        
+                        # 更新状态缓存
+                        self.status_cache[mid] = {
+                            'status': current_status,
+                            'room_id': live_status.get('room_id'),
+                            'title': live_status.get('title'),
+                            'name': live_status.get('name'),
+                            'timestamp': time.time() + self.check_interval
+                        }
+                        
+                        # 如果状态发生变化
                         if current_status != last_status:
                             if current_status == 1:
                                 # 开播通知
@@ -358,17 +373,11 @@ class BilibiliMonitor:
                                 )
                                 
                                 logger.info(f"[开播] {live_status['name']} ({mid})")
-                                logger.info(f"- 标题: {live_status['title']}")
-                                logger.info(f"- 房间号: {live_status['room_id']}")
                                 self.db_manager.add_live_record(
                                     mid=mid,
                                     room_id=live_status['room_id'],
                                     title=live_status['title']
                                 )
-                                
-                                # 开播时立即截图
-                                self.handle_screenshot(mid, live_status)
-                                
                             else:
                                 # 下播通知
                                 self.notifier.notify_live_end(
@@ -398,16 +407,9 @@ class BilibiliMonitor:
                 logger.debug(f"等待 {self.check_interval} 秒后进行下次检查")
                 time.sleep(self.check_interval)
                 
-            except KeyboardInterrupt:
-                logger.info("正在停止监控...")
-                self.session.close()
-                logger.info("监控已停止")
-                raise
-                
             except Exception as e:
                 logger.error(f"监控循环出错: {str(e)}")
-                time.sleep(self.check_interval)
-                continue
+                time.sleep(10)  # 出错后等待10秒再继续
 
     # 在 BilibiliMonitor 类中添加方法
     def update_monitor_list(self):
@@ -419,3 +421,4 @@ class BilibiliMonitor:
             logger.info(f"监控列表已更新: {self.monitor_mids}")
         except Exception as e:
             logger.error(f"更新监控列表失败: {str(e)}")
+
